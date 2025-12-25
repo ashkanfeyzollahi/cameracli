@@ -1,77 +1,70 @@
 #include <iostream>
+#include <locale>
 #include <memory>
 #include <vector>
 
 #include <ccap.h>
-#include <ncurses.h>
+#include <ncpp/ncpp.hh>
+#include <ncpp/Visual.hh>
 #include <spdlog/spdlog.h>
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb/stb_image_resize2.h"
 
-static const std::string GSCALE("$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ");
-
-class NCursesContext
-{
-public:
-    NCursesContext();
-    ~NCursesContext();
-
-    NCursesContext(const NCursesContext &) = delete;
-    NCursesContext &operator=(const NCursesContext &) = delete;
-};
-
-NCursesContext::NCursesContext()
-{
-    initscr();
-    cbreak();
-    noecho();
-    keypad(stdscr, TRUE);
-
-    if (has_colors())
-        start_color();
-}
-
-NCursesContext::~NCursesContext()
-{
-    endwin();
-}
-
-void captureAndRenderFrame(ccap::Provider *cameraProvider)
+void captureAndRenderFrame(ncpp::NotCurses *notCurses, ccap::Provider *cameraProvider)
 {
     auto frame = cameraProvider->grab(3000);
 
+    auto stdplane = notCurses->get_stdplane();
+    unsigned int termw, termh;
+    stdplane->get_dim(&termh, &termw);
+
     if (frame)
     {
-        int termy = getmaxy(stdscr), termx = getmaxx(stdscr);
-        std::vector<uint8_t> resized(termx * termy * 3);
+        std::vector<uint8_t> resized(termw * termh * 3);
         stbir_resize_uint8_srgb(
             frame->data[0], frame->width, frame->height, 0,
-            resized.data(), termx, termy, 0, STBIR_BGR);
-        for (int y = 0; y < termy; ++y)
+            resized.data(), termw, termh, 0, STBIR_BGR);
+        std::vector<uint32_t> rgba(termw * termh);
+        for (int y = 0; y < termh; y++)
         {
-            for (int x = 0; x < termx; ++x)
+            for (int x = 0; x < termw; x++)
             {
-                int idx = (y * termx + x) * 3;
+                size_t resized_idx = (y * termw + (termw - x - 1)) * 3;
 
-                uint8_t b = resized.at(idx);
-                uint8_t g = resized.at(idx + 1);
-                uint8_t r = resized.at(idx + 2);
+                size_t rgba_idx = y * termw + x;
 
-                int gs = (b + g + r) / 3;
-                char gsval = GSCALE.at(69 - (gs * 69) / 255);
+                uint32_t r = resized[resized_idx + 2];
+                uint32_t g = resized[resized_idx + 1];
+                uint32_t b = resized[resized_idx];
 
-                mvaddch(y, termx - x, gsval);
+                rgba[rgba_idx] =
+                    (r) |
+                    (g << 8) |
+                    (b << 16) |
+                    0xFF000000;
             }
         }
-        refresh();
+
+        ncpp::Visual vis(rgba.data(), termh, termw * sizeof(uint32_t), termw);
+        ncvisual_options nsvopts{};
+        nsvopts.n = stdplane->to_ncplane();
+        nsvopts.scaling = NCSCALE_STRETCH;
+        vis.blit(&nsvopts);
     }
+
+    notCurses->render();
 }
 
 int main(int argc, char const *argv[])
 {
-    NCursesContext ncursesContext;
+    if (!setlocale(LC_ALL, ""))
+    {
+        spdlog::error("failed to set locale");
+        return EXIT_FAILURE;
+    }
 
+    ncpp::NotCurses notCurses;
     ccap::Provider cameraProvider;
 
     cameraProvider.set(ccap::PropertyName::PixelFormatInternal, ccap::PixelFormat::BGR24);
@@ -79,12 +72,22 @@ int main(int argc, char const *argv[])
     ccap::setErrorCallback([](ccap::ErrorCode errorCode, std::string_view errorDescription)
                            { spdlog::error(errorDescription); });
 
+    bool running = true;
+    ncinput in;
+
     try
     {
         if (cameraProvider.open())
         {
-            while (true)
-                captureAndRenderFrame(&cameraProvider);
+            while (running)
+            {
+                captureAndRenderFrame(&notCurses, &cameraProvider);
+                if (notCurses.get(false, &in))
+                {
+                    if (in.id == 'q')
+                        running = false;
+                }
+            }
         }
         else
             throw std::runtime_error("couldn't open the capture device");
