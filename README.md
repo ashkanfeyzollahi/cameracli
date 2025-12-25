@@ -1,85 +1,107 @@
 # cameracli
 
-<p align="center"><i>📷 A terminal-based real-time camera viewer that renders live video as ASCII art.</i>
-    <br>
-    <img alt="GitHub License" src="https://img.shields.io/github/license/ashkanfeyzollahi/cameracli">
+<p align="center">
+  <i>📷 A terminal-based real-time camera viewer using Notcurses for high-performance, full-color rendering.</i>
+  <br>
+  <img alt="GitHub License" src="https://img.shields.io/github/license/ashkanfeyzollahi/cameracli">
 </p>
 
-**cameracli** is a lightweight command-line application that captures live camera frames and renders them directly in the terminal using ASCII grayscale characters.
-It combines real-time video capture with terminal graphics to create a retro, text-based camera experience.
+**cameracli** is a lightweight command-line application that captures live camera frames and renders them directly inside the terminal using **Notcurses visuals**.
 
-Built using **modern C++**, **Meson** for building, **ncurses** for terminal rendering, **ccap** for camera capture, **stb_image_resize** for image scaling, and **spdlog** for logging, cameracli demonstrates efficient multimedia processing entirely inside a terminal.
+Instead of traditional ASCII rendering, cameracli leverages **pixel-accurate RGBA blitting** to display real-time video output in modern terminals that support Notcurses, providing a smooth and visually rich terminal camera experience. (version *v0.1.0* uses ASCII rendering if you're interested!)
+
+Built using **modern C++**, **Meson** for building, **Notcurses (ncpp)** for rendering, **ccap** for camera capture, **stb_image_resize** for high-quality image scaling, and **spdlog** for logging.
 
 ---
 
 ## Features
 
 * Real-time camera capture via **ccap**
-* ASCII grayscale rendering in the terminal
+* Full-color terminal rendering using **Notcurses visuals**
 * Automatic resizing to current terminal dimensions
-* ncurses-based rendering for smooth updates
-* Simple RAII-based ncurses context management
-* BGR24 pixel format support
-* Minimal and fast rendering loop
-* Modern C++ design (RAII, STL containers)
+* High-quality sRGB-aware image resizing
+* BGR24 → RGBA pixel conversion
+* Minimal rendering latency
+* Keyboard input handling (`q` to quit)
+* Modern C++ design with RAII
 * Clean Meson-based build system
 
 ---
 
 ## Quick Reference
 
-**Binary name:** `cameracli`
-**Run command:** `./cameracli`
+**Binary name:** `cameracli`  
+**Run command:** `./cameracli`  
 
 After building the project, simply run:
 
 ```bash
 ./cameracli
-```
+````
 
-Make sure your terminal supports ncurses and your system has a working camera device.
+Press **`q`** at any time to exit the application.
 
----
+> [!WARNING]
+> Requires a terminal with **Notcurses support** (e.g. Kitty, Alacritty, WezTerm) or a terminal that supports `xterm-256color`.
 
-## Rendering Basics
-
-### Grayscale Mapping
-
-Each pixel is converted to grayscale using the average of RGB values:
-
-```
-gray = (R + G + B) / 3
-```
-
-The grayscale value is mapped to a character from the following scale:
-
-```
-$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,"^`'.
-```
-
-Darker pixels use denser characters, while brighter pixels use lighter ones.
+> [!INFO]
+> Version *v0.1.0* doesn't require any fancy terminal and works in almost all terminals that aren't `$TERM=dumb`.
 
 ---
 
 ## How It Works
 
-### Frame Capture
+### Camera Capture
 
-* A `ccap::Provider` instance opens the default camera device
-* Frames are grabbed with a timeout of 3000 ms
-* Pixel format is set to **BGR24** for compatibility
+* A `ccap::Provider` instance opens the default system camera
+* Frames are captured with a timeout of **3000 ms**
+* Pixel format is explicitly set to **BGR24**
+* Errors are reported via **ccap error callbacks**
 
-### Resizing
+---
 
-* Each frame is resized to match the terminal size
-* Uses **stb_image_resize** with sRGB-aware resizing
-* Output buffer matches terminal rows × columns
+### Terminal and Rendering Context
 
-### Rendering
+* Uses **Notcurses (ncpp)** instead of ncurses (version *v0.1.0* uses **ncurses**)
+* `ncpp::NotCurses` manages terminal initialization and teardown
+* The standard plane (`stdplane`) is used as the render target
+* Terminal dimensions are queried **every frame** to stay responsive to resizing
 
-* Each resized pixel is converted to a grayscale character
-* Characters are rendered using `mvaddch`
-* Screen refreshes continuously for real-time output
+---
+
+### Image Resizing
+
+* Raw camera frames are resized to match terminal dimensions
+* Uses **stb_image_resize v2**
+* sRGB-aware resizing for improved color accuracy
+
+---
+
+### Pixel Format Conversion
+
+* Camera frames arrive as **BGR24**
+* Resized pixels are converted to **RGBA32**
+* Alpha channel is set to fully opaque (`0xFF`)
+* Horizontal flipping is applied during conversion
+
+---
+
+### Rendering Pipeline
+
+* RGBA buffer is wrapped in an `ncpp::Visual`
+* Visual is blitted directly to the standard plane
+* Scaling mode: `NCSCALE_STRETCH`
+* Rendering is finalized with `notcurses.render()`
+
+---
+
+## Controls
+
+| Key | Action           |
+| --- | ---------------- |
+| `q` | Quit application |
+
+Keyboard input is handled using Notcurses input events.
 
 ---
 
@@ -89,10 +111,11 @@ Darker pixels use denser characters, while brighter pixels use lighter ones.
 
 * **C++17** compatible compiler
 * **Meson** and **Ninja**
-* **ncurses**
+* **Notcurses** (with C++ bindings)
 * **ccap**
 * **spdlog**
-* A working camera device (e.g., `/dev/video0` on Linux)
+* A working camera device
+  *Example: `/dev/video0` on Linux*
 
 ---
 
@@ -132,72 +155,58 @@ meson compile -C build
 
 ## Technical Breakdown
 
-* **NCursesContext**
+### Core Components
 
-  * RAII wrapper for initializing and shutting down ncurses
-  * Ensures terminal state is restored on exit
+* **Main Loop**
+
+  * Captures frames
+  * Renders visuals
+  * Handles keyboard input
 
 * **Camera Provider**
 
-  * Uses `ccap::Provider` to open and manage the camera
-  * Frame grabbing handled in a tight render loop
+  * Wraps camera access via `ccap::Provider`
+  * Manages pixel format and frame grabbing
 
-* **Image Processing**
+* **Renderer**
 
-  * Raw camera frames resized using `stbir_resize_uint8_srgb`
-  * Efficient buffer reuse via `std::vector<uint8_t>`
+  * Converts BGR → RGBA
+  * Creates Notcurses visuals
+  * Handles blitting and scaling
 
-* **Rendering Loop**
+* **Resizer**
 
-  * Terminal dimensions queried every frame
-  * ASCII characters rendered per pixel
-  * `refresh()` updates the terminal
-
----
-
-## Configuration
-
-Currently, cameracli uses sensible defaults:
-
-* Camera: default system camera
-* Pixel format: `BGR24`
-* Frame timeout: 3000 ms
-* Terminal size: auto-detected per frame
-
-Future improvements may include CLI flags for device selection and frame rate control.
+  * Uses `stb_image_resize` for high-quality scaling
+  * Matches output resolution to terminal size
 
 ---
 
 ## Error Handling
 
-* Camera errors are reported via **ccap error callbacks**
-* All errors are logged using **spdlog**
-* ncurses cleanup is guaranteed via RAII, even on failure
-
-Example error handling callback:
-
-```cpp
-ccap::setErrorCallback([](ccap::ErrorCode code, std::string_view desc) {
-    spdlog::error(desc);
-});
-```
+* Camera-related errors reported via **ccap error callbacks**
+* Runtime errors logged with **spdlog**
+* All failures result in clean program termination
 
 ---
 
-## Architecture Overview
-
-### Core Components
-
-* **Main Loop** – Captures frames and triggers rendering
-* **NCursesContext** – Manages terminal lifecycle
-* **Renderer** – Converts image data to ASCII output
-* **Resizer** – Scales frames to terminal resolution
-
-### Performance Notes
+## Performance Notes
 
 * Minimal allocations per frame
-* Direct buffer access for rendering
-* Efficient ASCII mapping with constant-time lookup
+* Efficient buffer reuse via `std::vector`
+* Direct memory access for pixel conversion
+* No intermediate ASCII conversion overhead
+* Terminal resizing handled dynamically
+
+---
+
+## Future Improvements
+
+* CLI flags for:
+
+  * Camera selection
+  * Resolution scaling
+  * Frame rate limiting
+* Optional grayscale / ASCII rendering mode
 
 ---
 
@@ -205,9 +214,9 @@ ccap::setErrorCallback([](ccap::ErrorCode code, std::string_view desc) {
 
 Thanks to:
 
-* **ncurses** for terminal rendering
+* **Notcurses** for high-performance terminal graphics
 * **ccap** for camera capture abstraction
-* **stb_image_resize** for fast image scaling
+* **stb_image_resize** for fast and accurate image scaling
 * **spdlog** for structured logging
 
 ---
