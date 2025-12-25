@@ -44,7 +44,7 @@ Press **`q`** at any time to exit the application.
 > [!WARNING]
 > Requires a terminal with **Notcurses support** (e.g. Kitty, Alacritty, WezTerm) or a terminal that supports `xterm-256color`.
 
-> [!INFO]
+> [!TIP]
 > Version *v0.1.0* doesn't require any fancy terminal and works in almost all terminals that aren't `$TERM=dumb`.
 
 ---
