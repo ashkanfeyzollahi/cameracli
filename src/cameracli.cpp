@@ -20,17 +20,47 @@ std::shared_ptr<ccap::VideoFrame> captureCamera(ccap::Provider &cameraProvider)
     return videoFrame;
 }
 
-void renderCamera(ncpp::NotCurses *notCurses, std::shared_ptr<ccap::VideoFrame> videoFrame)
+std::vector<uint32_t> copyVideoFrameData(std::shared_ptr<ccap::VideoFrame> videoFrame)
 {
-    auto stdplane = notCurses->get_stdplane();
+    std::vector<uint32_t> videoFrameDataCopy(videoFrame->width * videoFrame->height);
+    memcpy(videoFrameDataCopy.data(), videoFrame->data[0], videoFrame->sizeInBytes);
+    return videoFrameDataCopy;
+}
+
+void processVideoFrame(std::shared_ptr<ccap::VideoFrame> videoFrame)
+{
+    std::vector<uint32_t> videoFrameDataCopy = copyVideoFrameData(videoFrame);
+    for (uint32_t y = 0; y < videoFrame->height; y++)
+    {
+        for (uint32_t x = 0; x < videoFrame->width; x++)
+        {
+            uint32_t idx = (y * videoFrame->width + x);
+            uint32_t idx2 = (y * videoFrame->width + (videoFrame->width - x - 1));
+            ((uint32_t *)videoFrame->data[0])[idx] = videoFrameDataCopy.at(idx2);
+        }
+    }
+}
+
+ncpp::Plane blitVideoFrame(ncpp::NotCurses &notCurses, std::shared_ptr<ccap::VideoFrame> videoFrame)
+{
+    auto stdplane = notCurses.get_stdplane();
+
+    ncplane_options cameraPlaneOptions{};
+
+    cameraPlaneOptions.x = 0;
+    cameraPlaneOptions.y = 0;
+    cameraPlaneOptions.cols = stdplane->get_dim_x();
+    cameraPlaneOptions.rows = stdplane->get_dim_y();
+
+    ncpp::Plane cameraPlane(stdplane, cameraPlaneOptions);
 
     ncpp::Visual vis((uint32_t *)videoFrame->data[0], videoFrame->height, videoFrame->width * sizeof(uint32_t), videoFrame->width);
     ncvisual_options nsvopts{};
-    nsvopts.n = stdplane->to_ncplane();
+    nsvopts.n = cameraPlane.to_ncplane();
     nsvopts.scaling = NCSCALE_STRETCH;
     vis.blit(&nsvopts);
 
-    notCurses->render();
+    return cameraPlane;
 }
 
 int main(int argc, char const *argv[])
@@ -60,12 +90,14 @@ int main(int argc, char const *argv[])
             while (running)
             {
                 auto videoFrame = captureCamera(cameraProvider);
-                renderCamera(&notCurses, videoFrame);
-                if (notCurses.get(false, &in))
-                {
-                    if (in.id == 'q')
-                        running = false;
-                }
+                processVideoFrame(videoFrame);
+                auto videoFramePlane = blitVideoFrame(notCurses, videoFrame);
+
+                notCurses.render();
+                notCurses.get(false, &in);
+
+                if (in.id == 'q')
+                    running = false;
             }
         }
         else
