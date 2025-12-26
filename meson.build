@@ -2,8 +2,6 @@ project('cameracli', 'cpp')
 
 cmake = import('cmake')
 
-inc = include_directories('external')
-
 ccap_proj = cmake.subproject('ccap')
 
 ccap_dep = ccap_proj.dependency('ccap')
@@ -22,6 +20,5 @@ spdlog_dep = dependency('spdlog')
 deps = [ccap_dep, notcurses_dep, notcurses_cpp_dep, spdlog_dep]
 
 executable('cameracli', 'src/cameracli.cpp',
-    include_directories: inc,
     dependencies: deps
 )
