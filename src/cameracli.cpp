@@ -8,9 +8,6 @@
 #include <ncpp/Visual.hh>
 #include <spdlog/spdlog.h>
 
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb/stb_image_resize2.h"
-
 #define CCAP_GRAB_MAXIMUM_WAIT_TIME 3000
 
 std::shared_ptr<ccap::VideoFrame> captureCamera(ccap::Provider &cameraProvider)
