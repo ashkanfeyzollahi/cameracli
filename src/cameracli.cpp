@@ -11,47 +11,43 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb/stb_image_resize2.h"
 
-void captureAndRenderFrame(ncpp::NotCurses *notCurses, ccap::Provider *cameraProvider)
+#define CCAP_GRAB_MAXIMUM_WAIT_TIME 3000
+
+std::shared_ptr<ccap::VideoFrame> captureCamera(ccap::Provider &cameraProvider)
 {
-    auto frame = cameraProvider->grab(3000);
+    auto videoFrame = cameraProvider.grab(CCAP_GRAB_MAXIMUM_WAIT_TIME);
 
+    if (!videoFrame)
+        throw std::runtime_error("couldn't capture camera");
+
+    return videoFrame;
+}
+
+void renderCamera(ncpp::NotCurses *notCurses, std::shared_ptr<ccap::VideoFrame> videoFrame)
+{
     auto stdplane = notCurses->get_stdplane();
-    unsigned int termw, termh;
-    stdplane->get_dim(&termh, &termw);
-
-    if (frame)
+    std::vector<uint32_t> rgba(videoFrame->width * videoFrame->height);
+    for (int y = 0; y < videoFrame->height; y++)
     {
-        std::vector<uint8_t> resized(termw * termh * 3);
-        stbir_resize_uint8_srgb(
-            frame->data[0], frame->width, frame->height, 0,
-            resized.data(), termw, termh, 0, STBIR_BGR);
-        std::vector<uint32_t> rgba(termw * termh);
-        for (int y = 0; y < termh; y++)
+        for (int x = 0; x < videoFrame->width; x++)
         {
-            for (int x = 0; x < termw; x++)
-            {
-                size_t resized_idx = (y * termw + (termw - x - 1)) * 3;
-
-                size_t rgba_idx = y * termw + x;
-
-                uint32_t r = resized[resized_idx + 2];
-                uint32_t g = resized[resized_idx + 1];
-                uint32_t b = resized[resized_idx];
-
-                rgba[rgba_idx] =
-                    (r) |
-                    (g << 8) |
-                    (b << 16) |
-                    0xFF000000;
-            }
+            size_t idx = (y * videoFrame->width + (videoFrame->width - x - 1)) * 3;
+            size_t rgba_idx = y * videoFrame->width + x;
+            uint32_t r = videoFrame->data[0][idx + 2];
+            uint32_t g = videoFrame->data[0][idx + 1];
+            uint32_t b = videoFrame->data[0][idx];
+            rgba[rgba_idx] =
+                (r) |
+                (g << 8) |
+                (b << 16) |
+                0xFF000000;
         }
-
-        ncpp::Visual vis(rgba.data(), termh, termw * sizeof(uint32_t), termw);
-        ncvisual_options nsvopts{};
-        nsvopts.n = stdplane->to_ncplane();
-        nsvopts.scaling = NCSCALE_STRETCH;
-        vis.blit(&nsvopts);
     }
+    ncpp::Visual vis(rgba.data(), videoFrame->height, videoFrame->width * sizeof(uint32_t), videoFrame->width);
+    ncvisual_options nsvopts{};
+    nsvopts.n = stdplane->to_ncplane();
+    nsvopts.scaling = NCSCALE_STRETCH;
+    vis.blit(&nsvopts);
 
     notCurses->render();
 }
@@ -81,7 +77,8 @@ int main(int argc, char const *argv[])
         {
             while (running)
             {
-                captureAndRenderFrame(&notCurses, &cameraProvider);
+                auto videoFrame = captureCamera(cameraProvider);
+                renderCamera(&notCurses, videoFrame);
                 if (notCurses.get(false, &in))
                 {
                     if (in.id == 'q')
