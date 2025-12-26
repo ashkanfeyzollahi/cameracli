@@ -67,7 +67,7 @@ int main(int argc, char const *argv[])
     ncpp::NotCurses notCurses;
     ccap::Provider cameraProvider;
 
-    cameraProvider.set(ccap::PropertyName::PixelFormatInternal, ccap::PixelFormat::BGR24);
+    cameraProvider.set(ccap::PropertyName::PixelFormatInternal, ccap::PixelFormat::RGB24);
 
     ccap::setErrorCallback([](ccap::ErrorCode errorCode, std::string_view errorDescription)
                            { spdlog::error(errorDescription); });
