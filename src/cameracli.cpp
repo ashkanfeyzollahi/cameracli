@@ -23,24 +23,8 @@ std::shared_ptr<ccap::VideoFrame> captureCamera(ccap::Provider &cameraProvider)
 void renderCamera(ncpp::NotCurses *notCurses, std::shared_ptr<ccap::VideoFrame> videoFrame)
 {
     auto stdplane = notCurses->get_stdplane();
-    std::vector<uint32_t> rgba(videoFrame->width * videoFrame->height);
-    for (int y = 0; y < videoFrame->height; y++)
-    {
-        for (int x = 0; x < videoFrame->width; x++)
-        {
-            size_t idx = (y * videoFrame->width + (videoFrame->width - x - 1)) * 3;
-            size_t rgba_idx = y * videoFrame->width + x;
-            uint32_t r = videoFrame->data[0][idx + 2];
-            uint32_t g = videoFrame->data[0][idx + 1];
-            uint32_t b = videoFrame->data[0][idx];
-            rgba[rgba_idx] =
-                (r) |
-                (g << 8) |
-                (b << 16) |
-                0xFF000000;
-        }
-    }
-    ncpp::Visual vis(rgba.data(), videoFrame->height, videoFrame->width * sizeof(uint32_t), videoFrame->width);
+
+    ncpp::Visual vis((uint32_t *)videoFrame->data[0], videoFrame->height, videoFrame->width * sizeof(uint32_t), videoFrame->width);
     ncvisual_options nsvopts{};
     nsvopts.n = stdplane->to_ncplane();
     nsvopts.scaling = NCSCALE_STRETCH;
@@ -61,6 +45,7 @@ int main(int argc, char const *argv[])
     ccap::Provider cameraProvider;
 
     cameraProvider.set(ccap::PropertyName::PixelFormatInternal, ccap::PixelFormat::RGB24);
+    cameraProvider.set(ccap::PropertyName::PixelFormatOutput, ccap::PixelFormat::RGBA32);
 
     ccap::setErrorCallback([](ccap::ErrorCode errorCode, std::string_view errorDescription)
                            { spdlog::error(errorDescription); });
