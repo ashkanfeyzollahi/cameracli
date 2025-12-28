@@ -1,4 +1,5 @@
-project('cameracli', 'cpp')
+project('cameracli', 'cpp',
+    default_options: ['cpp_std=c++20'])
 
 cmake = import('cmake')
 
