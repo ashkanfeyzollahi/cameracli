@@ -239,7 +239,7 @@ void run(int argc, char const *argv[]) {
         auto screenWidth = screen.dimx(), screenHeight = screen.dimy();
         auto controlPanelRequirement = controlPanel->requirement();
 
-        frameWidth = screenWidth - controlPanelRequirement.min_x;
+        frameWidth = screenWidth - 33;
         frameHeight = screenHeight;
 
         auto frame = frameRenderer->Render();
