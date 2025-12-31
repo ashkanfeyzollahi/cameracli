@@ -1,228 +1,63 @@
 # cameracli
 
 <p align="center">
-  <i>📷 A terminal-based real-time camera viewer using Notcurses for high-performance, full-color rendering.</i>
+  <i>📷 A cross-platform terminal-based camera viewer with an interactive menu.</i>
   <br>
   <img alt="GitHub License" src="https://img.shields.io/github/license/ashkanfeyzollahi/cameracli">
 </p>
 
-**cameracli** is a lightweight command-line application that captures live camera frames and renders them directly inside the terminal using **Notcurses visuals**.
+`cameracli` is a C++ command-line application that captures live camera input and renders it directly inside your terminal using a text-based user interface. It provides a simple, interactive control panel for toggling visual effects such as ASCII rendering, grayscale mode, and frame flipping — all in real time.
 
-Instead of traditional ASCII rendering, cameracli leverages **pixel-accurate RGBA blitting** to display real-time video output in modern terminals that support Notcurses, providing a smooth and visually rich terminal camera experience. (version *v0.1.0* uses ASCII rendering if you're interested!)
-
-Built using **modern C++**, **Meson** for building, **Notcurses (ncpp)** for rendering, **ccap** for camera capture, **stb_image_resize** for high-quality image scaling, and **spdlog** for logging.
-
----
+The project is designed to be lightweight, portable, and fully cross-platform.
 
 ## Features
 
-* Real-time camera capture via **ccap**
-* Full-color terminal rendering using **Notcurses visuals**
-* Automatic resizing to current terminal dimensions
-* High-quality sRGB-aware image resizing
-* BGR24 → RGBA pixel conversion
-* Minimal rendering latency
-* Keyboard input handling (`q` to quit)
-* Modern C++ design with RAII
-* Clean Meson-based build system
+* Live camera capture inside the terminal
+* Interactive menu-driven TUI powered by **FTXUI**
+* Toggleable rendering options:
 
----
+  * ASCII mode
+  * Grayscale
+  * Horizontal and vertical flipping
+* Lower memory consumption compared to earlier versions
+* Cross-platform support (Linux, macOS, Windows)
+* Structured error logging via **spdlog**
 
-## Quick Reference
+## Compiling
 
-**Binary name:** `cameracli`  
-**Run command:** `./cameracli`  
-
-After building the project, simply run:
-
-```bash
-./cameracli
-````
-
-Press **`q`** at any time to exit the application.
-
-> [!WARNING]
-> Requires a terminal with **Notcurses support** (e.g. Kitty, Alacritty, WezTerm) or a terminal that supports `xterm-256color`.
-
-> [!TIP]
-> Version *v0.1.0* doesn't require any fancy terminal and works in almost all terminals that aren't `$TERM=dumb`.
-
----
-
-## How It Works
-
-### Camera Capture
-
-* A `ccap::Provider` instance opens the default system camera
-* Frames are captured with a timeout of **3000 ms**
-* Pixel format is explicitly set to **BGR24**
-* Errors are reported via **ccap error callbacks**
-
----
-
-### Terminal and Rendering Context
-
-* Uses **Notcurses (ncpp)** instead of ncurses (version *v0.1.0* uses **ncurses**)
-* `ncpp::NotCurses` manages terminal initialization and teardown
-* The standard plane (`stdplane`) is used as the render target
-* Terminal dimensions are queried **every frame** to stay responsive to resizing
-
----
-
-### Image Resizing
-
-* Raw camera frames are resized to match terminal dimensions
-* Uses **stb_image_resize v2**
-* sRGB-aware resizing for improved color accuracy
-
----
-
-### Pixel Format Conversion
-
-* Camera frames arrive as **BGR24**
-* Resized pixels are converted to **RGBA32**
-* Alpha channel is set to fully opaque (`0xFF`)
-* Horizontal flipping is applied during conversion
-
----
-
-### Rendering Pipeline
-
-* RGBA buffer is wrapped in an `ncpp::Visual`
-* Visual is blitted directly to the standard plane
-* Scaling mode: `NCSCALE_STRETCH`
-* Rendering is finalized with `notcurses.render()`
-
----
-
-## Controls
-
-| Key | Action           |
-| --- | ---------------- |
-| `q` | Quit application |
-
-Keyboard input is handled using Notcurses input events.
-
----
-
-## Running the Project
+This project uses **CMake** for configuration and building.
 
 ### Requirements
 
-* **C++17** compatible compiler
-* **Meson** and **Ninja**
-* **Notcurses** (with C++ bindings)
-* **ccap**
-* **spdlog**
-* A working camera device
-  *Example: `/dev/video0` on Linux*
+* C++20 compatible compiler
+* CMake (≥ 3.16)
+* Dependencies:
 
----
+  * [FTXUI](https://github.com/ArthurSonzogni/FTXUI) (Cloned when configuring via CMake)
+  * [CameraCapture](https://github.com/wysaid/CameraCapture) (Cloned when configuring via CMake)
+  * [spdlog](https://github.com/gabime/spdlog) (Needs to be installed)
 
-### Build Instructions
-
-1. Clone the repository:
+### Build Steps
 
 ```bash
-git clone https://github.com/ashkanfeyzollahi/cameracli
-```
-
-2. Enter the project directory:
-
-```bash
+git clone https://github.com/ashkanfeyzollahi/cameracli.git
 cd cameracli
+mkdir build && cd build
+cmake ..
+cmake --build .
 ```
-
-3. Configure the build:
-
-```bash
-meson setup build
-```
-
-4. Compile:
-
-```bash
-meson compile -C build
-```
-
-5. Run:
-
-```bash
-./build/cameracli
-```
-
----
-
-## Technical Breakdown
-
-### Core Components
-
-* **Main Loop**
-
-  * Captures frames
-  * Renders visuals
-  * Handles keyboard input
-
-* **Camera Provider**
-
-  * Wraps camera access via `ccap::Provider`
-  * Manages pixel format and frame grabbing
-
-* **Renderer**
-
-  * Converts BGR → RGBA
-  * Creates Notcurses visuals
-  * Handles blitting and scaling
-
-* **Resizer**
-
-  * Uses `stb_image_resize` for high-quality scaling
-  * Matches output resolution to terminal size
-
----
-
-## Error Handling
-
-* Camera-related errors reported via **ccap error callbacks**
-* Runtime errors logged with **spdlog**
-* All failures result in clean program termination
-
----
-
-## Performance Notes
-
-* Minimal allocations per frame
-* Efficient buffer reuse via `std::vector`
-* Direct memory access for pixel conversion
-* No intermediate ASCII conversion overhead
-* Terminal resizing handled dynamically
-
----
-
-## Future Improvements
-
-* CLI flags for:
-
-  * Camera selection
-  * Resolution scaling
-  * Frame rate limiting
-* Optional grayscale / ASCII rendering mode
-
----
 
 ## Acknowledgements
 
-Thanks to:
-
-* **Notcurses** for high-performance terminal graphics
-* **ccap** for camera capture abstraction
-* **stb_image_resize** for fast and accurate image scaling
-* **spdlog** for structured logging
-
----
+* **CameraCapture** — cross-platform camera capture backend
+* **FTXUI** — terminal user interface framework
+* **spdlog** — logging library
 
 ## Bug Reports
 
-Found a bug or want to suggest a feature?
-[Open an issue](https://github.com/ashkanfeyzollahi/cameracli/issues) on GitHub.
+If you encounter a bug or unexpected behavior, please open an issue on GitHub.
+Including platform details and reproduction steps is highly appreciated.
 
+## License
+
+This project is licensed under the **MIT License**.
