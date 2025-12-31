@@ -118,9 +118,9 @@ struct FrameOptions {
 
 std::string pixelToASCII(Pixel pixel) {
     static std::string grayscaleCharset =
-        "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'.";
+        "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'.          ";
     int avg = (pixel.red + pixel.green + pixel.blue) / 3;
-    return std::string({grayscaleCharset.at(68 - avg * 68 / 255)});
+    return std::string({grayscaleCharset.at(78 - avg * 78 / 255)});
 }
 
 ftxui::Element renderFrame(ccap::Provider &cameraProvider, int width, int height,
