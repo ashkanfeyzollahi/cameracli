@@ -1,3 +1,12 @@
+## [2.0.1] - 2025-12-31
+
+### 🐛 Bug Fixes
+
+- Proper frame resizing
+
+### ⚙️ Miscellaneous Tasks
+
+- *(version)* Bump patch version
 ## [2.0.0] - 2025-12-31
 
 ### 🚀 Features
