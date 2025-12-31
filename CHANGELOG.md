@@ -1,3 +1,12 @@
+## [2.1.0] - 2025-12-31
+
+### 🚀 Features
+
+- *(ascii)* Extend grayscale charset for better quality
+
+### 💼 Other
+
+- *(version)* Bump minor version
 ## [2.0.1] - 2025-12-31
 
 ### 🐛 Bug Fixes
