@@ -1,3 +1,26 @@
+## [2.0.0] - 2025-12-31
+
+### 🚀 Features
+
+- *(ui)* [**breaking**] Migrate to ftxui and add a menu
+
+### 💼 Other
+
+- *(cpp_std)* Change c++ std to 20
+- Migrate from meson to cmake
+
+### 📚 Documentation
+
+- Modify README.md to reflect new version
+
+### ⚙️ Miscellaneous Tasks
+
+- Remove subprojects
+- *(formatting)* Add a clang-format config
+
+### ◀️ Revert
+
+- *(stb_image_resize2)* Revert remove stb_image_resize2 header
 ## [1.1.0] - 2025-12-26
 
 ### 🚀 Features
