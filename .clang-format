@@ -1,0 +1,13 @@
+BasedOnStyle: LLVM
+
+IndentWidth: 4
+ColumnLimit: 100
+
+BreakBeforeBraces: Attach
+AllowShortLambdasOnASingleLine: Empty
+LambdaBodyIndentation: Signature
+
+ConstructorInitializerIndentWidth: 4
+BreakConstructorInitializers: BeforeComma
+
+AccessModifierOffset: -4
