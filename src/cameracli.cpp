@@ -240,7 +240,7 @@ void run(int argc, char const *argv[]) {
         auto controlPanelRequirement = controlPanel->requirement();
 
         frameWidth = screenWidth - 33;
-        frameHeight = screenHeight;
+        frameHeight = screenHeight - 2;
 
         auto frame = frameRenderer->Render();
 
